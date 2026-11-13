@@ -103,7 +103,8 @@ class WelcomeBot(discord.Client):
 
     async def on_member_leave(self, member: discord.Member):
         message: discord.Message = await self.get_channel(self.channel).history().find(lambda m: m.author.id == self.user.id and member in m.mentions)
-        await message.delete()
+        if message:
+            await message.delete()
 
     async def send_welcome_message(self, member: discord.Member):
         embed = discord.Embed(title=f"Welcome {member.display_name}", description=f"Get some roles in the role channel", color=discord.Color.blue())
