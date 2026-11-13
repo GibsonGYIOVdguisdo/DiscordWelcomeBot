@@ -1,2 +1,4 @@
 .env
 welcomes.txt
+__pycache__
+.venv
