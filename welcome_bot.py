@@ -36,11 +36,12 @@ class WelcomeBot(discord.Client):
             guild=discord.Object(id=self.guild_id) if self.guild_id else None
         )
         @app_commands.default_permissions(administrator=True)
-        async def leaderboard(interaction: discord.Interaction, all_time:bool=False):
-            top_10 = await self.tracker.get_top_10()
+        async def leaderboard(interaction: discord.Interaction, all_time: bool = False):
+            guild_id = interaction.guild_id or self.guild_id
+            top_10 = await self.tracker.get_top_10(guild=guild_id, weekly=not all_time)
             leaderboard_text = ""
             for i, (user_id, count) in enumerate(top_10, 1):
-                member = interaction.guild.get_member(user_id)
+                member = interaction.guild.get_member(user_id) if interaction.guild else None
                 name = member.display_name if member else user_id
                 leaderboard_text += f"\n{i}. {name} ({count})"
             embed = discord.Embed(title=f"Welcome Leaderboard", description=f"{leaderboard_text}", color=discord.Color.blue())
@@ -53,7 +54,8 @@ class WelcomeBot(discord.Client):
         )
         @app_commands.default_permissions(administrator=True)
         async def welcomes(interaction: discord.Interaction):
-            count = await self.tracker.get_welcomes_count(interaction.user.id)
+            guild_id = interaction.guild_id or self.guild_id
+            count = await self.tracker.get_welcomes_count(interaction.user.id, guild=guild_id, weekly=True)
             await interaction.response.send_message(f"You have welcomed {count} people", ephemeral=True)
 
         @self.tree.command(
@@ -63,7 +65,8 @@ class WelcomeBot(discord.Client):
         )
         @app_commands.default_permissions(administrator=True)
         async def add(interaction: discord.Interaction, fake_member: int):
-            await self.tracker.add_welcome(interaction.user.id, fake_member)
+            guild_id = interaction.guild_id or self.guild_id
+            await self.tracker.add_welcome(interaction.user.id, fake_member, guild=guild_id)
 
             await interaction.response.send_message(f"done", ephemeral=True)
 
@@ -73,10 +76,8 @@ class WelcomeBot(discord.Client):
             guild=discord.Object(id=self.guild_id) if self.guild_id else None,
         )
         @app_commands.default_permissions(administrator=True)
-        async def add(interaction: discord.Interaction):
-
+        async def welcome_message(interaction: discord.Interaction):
             await self.send_welcome_message(interaction.user)
-
             await interaction.response.send_message(f"done", ephemeral=True)
 
         @self.tree.command(
@@ -84,8 +85,10 @@ class WelcomeBot(discord.Client):
             description="test",
             guild=discord.Object(id=self.guild_id) if self.guild_id else None,
         )
-        async def add(interaction: discord.Interaction):
-            await self.update_best_role(interaction.guild)
+        @app_commands.default_permissions(administrator=True)
+        async def update_best_role_cmd(interaction: discord.Interaction):
+            if interaction.guild:
+                await self.update_best_role(interaction.guild)
             await interaction.response.send_message(f"done", ephemeral=True)
 
     async def on_ready(self):
@@ -113,12 +116,13 @@ class WelcomeBot(discord.Client):
         await channel.send(f"<@{member.id}>", embed=embed, delete_after=300)
 
     async def on_message(self, message: discord.Message):
-        if message.author.id != self.user.id:
+        if message.author.id != self.user.id and message.guild:
             welcomes = self.get_welcomes_in_message(message)
             for member in welcomes:
-                if not self.tracker.already_welcomed(message.author.id, member.id):
-                    await self.tracker.add_user_mention(message.author.id, member.id)
-            if welcomes: self.update_best_role(message.guild)
+                if not await self.tracker.already_welcomed(message.author.id, member.id, guild=message.guild.id):
+                    await self.tracker.add_welcome(message.author.id, member.id, guild=message.guild.id)
+            if welcomes:
+                await self.update_best_role(message.guild)
 
     def get_welcomes_in_message(self, message: discord.Message) -> list[discord.Member]:
         mentions = []
@@ -133,11 +137,16 @@ class WelcomeBot(discord.Client):
 
     async def update_best_role(self, guild: discord.Guild):
         role = guild.get_role(self.role)
-        top_welcomer_id, welcomes = await self.tracker.get_top_welcomer()
+        top_welcomer_id, welcomes = await self.tracker.get_top_welcomer(guild=guild.id)
+        if not top_welcomer_id or not role:
+            return
         top_has_role = False
         for member in role.members:
-            if member.id != top_welcomer_id: await member.remove_roles(role)
-            elif role in member.roles: top_has_role = True
+            if member.id != top_welcomer_id:
+                await member.remove_roles(role)
+            elif role in member.roles:
+                top_has_role = True
         if not top_has_role: 
             member = guild.get_member(top_welcomer_id)
-            if member: await member.add_roles(role)
+            if member:
+                await member.add_roles(role)

@@ -16,23 +16,40 @@ class WelcomeCountTracker:
         self.collection = await self.database.create_collection("welcomes")
 
     async def create_indexes(self):
-        await self.collection.create_index([("date", -1), ("welcomer", 1)])
-        await self.collection.create_index([("welcomer", 1), ("welcomed", 1)], unique=True)  
+        await self.collection.create_index([("guild", 1), ("date", -1), ("welcomer", 1)])
+        await self.collection.create_index([("guild", 1), ("welcomer", 1), ("welcomed", 1)], unique=True)  
     
-    async def add_welcome(self, welcomer, welcomed) -> None:
-        await self.collection.insert_one(Welcome(welcomer=welcomer, welcomed=welcomed, date=datetime.now(tz=UTC)))
+    async def add_welcome(self, welcomer: int, welcomed: int, guild: int) -> None:
+        await self.collection.insert_one(
+            Welcome(
+                welcomer=welcomer,
+                welcomed=welcomed,
+                date=datetime.now(tz=UTC),
+                guild=guild,
+            )
+        )
 
-    async def already_welcomed(self, welcomer: int, welcomed: int) -> bool:
-        return not not await self.collection.find_one(Welcome(welcomer, welcomed))
+    add_user_mention = add_welcome
 
-    async def get_welcomes_count(self, welcomer: int, weekly: bool = False) -> int:
+    async def already_welcomed(self, welcomer: int, welcomed: int, guild: int = None) -> bool:
+        query = {"welcomer": welcomer, "welcomed": welcomed}
+        if guild is not None:
+            query["guild"] = guild
+        doc = await self.collection.find_one(query)
+        return doc is not None
+
+    async def get_welcomes_count(self, welcomer: int, guild: int = None, weekly: bool = False) -> int:
         query = {"welcomer": welcomer}
+        if guild is not None:
+            query["guild"] = guild
         if weekly:
             query["date"] = {"$gte": datetime.now(tz=UTC) - timedelta(days=7)}
         return await self.collection.count_documents(query)
 
-    async def get_top_10(self, weekly: bool = True) -> list[list[int]]:
+    async def get_top_10(self, guild: int = None, weekly: bool = True) -> list[list[int]]:
         match_stage = {"welcomer": {"$ne": None}}
+        if guild is not None:
+            match_stage["guild"] = guild
         if weekly:
             match_stage["date"] = {"$gte": datetime.now(tz=UTC) - timedelta(days=7)}
 
@@ -46,8 +63,10 @@ class WelcomeCountTracker:
         docs = await cursor.to_list(10)
         return [[doc["_id"], doc["count"]] for doc in docs]
 
-    async def get_top_welcomer(self, weekly: bool = True) -> list[list[int]]:
+    async def get_top_welcomer(self, guild: int = None, weekly: bool = True) -> list[int]:
         match_stage = {"welcomer": {"$ne": None}}
+        if guild is not None:
+            match_stage["guild"] = guild
         if weekly:
             match_stage["date"] = {"$gte": datetime.now(tz=UTC) - timedelta(days=7)}
 
@@ -59,6 +78,8 @@ class WelcomeCountTracker:
         ]
         cursor = await self.collection.aggregate(pipeline)
         docs = await cursor.to_list(1)
+        if not docs:
+            return [None, 0]
         doc = docs[0]
         return [doc["_id"], doc["count"]]
 
