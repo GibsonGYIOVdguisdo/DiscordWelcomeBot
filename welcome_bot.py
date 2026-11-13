@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import discord
 from discord import app_commands
 from welcome_tracker import WelcomeCountTracker
@@ -127,11 +127,11 @@ class WelcomeBot(discord.Client):
     def get_welcomes_in_message(self, message: discord.Message) -> list[discord.Member]:
         mentions = []
         for mention in message.mentions:
-            if mention.joined_at > datetime.now() - timedelta(minutes=5):
+            if mention.joined_at > datetime.now(tz=UTC) - timedelta(minutes=5):
                 mentions.append(mention)
         if message.reference:
             for mention in message.reference.resolved.mentions:
-                if message.author.joined_at > datetime.now() - timedelta(minutes=5):
+                if message.author.joined_at > datetime.now(tz=UTC) - timedelta(minutes=5):
                     mentions.append(mention)
         return list(set(mentions))
 
