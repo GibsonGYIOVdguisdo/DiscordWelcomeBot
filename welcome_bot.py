@@ -131,7 +131,7 @@ class WelcomeBot(discord.Client):
                 mentions.append(mention)
         if message.reference:
             for mention in message.reference.resolved.mentions:
-                if message.author.joined_at > datetime.now(tz=UTC) - timedelta(minutes=5):
+                if mention.joined_at > datetime.now(tz=UTC) - timedelta(minutes=5):
                     mentions.append(mention)
         return list(set(mentions))
 
