@@ -62,6 +62,26 @@ class WelcomeBot(discord.Client):
             await interaction.response.send_message(f"You have welcomed {count} people", ephemeral=True)
 
         @self.tree.command(
+            name="set_top_welcomer_role",
+            description="test",
+            guild=discord.Object(id=self.guild_id) if self.guild_id else None,
+        )
+        @app_commands.default_permissions(administrator=True)
+        async def set_top_welcomer_role(interaction: discord.Interaction, role: discord.Role):
+            await self.guild_collection.set_top_welcomer_role(interaction.guild_id, role.id)
+            await interaction.response.send_message(f"done", ephemeral=True)
+
+        @self.tree.command(
+            name="reset_guild_settings",
+            description="test",
+            guild=discord.Object(id=self.guild_id) if self.guild_id else None,
+        )
+        @app_commands.default_permissions(administrator=True)
+        async def set_top_welcomer_role(interaction: discord.Interaction):
+            await self.guild_collection.create_guild_document(interaction.guild_id)
+            await interaction.response.send_message(f"done", ephemeral=True)
+
+        @self.tree.command(
             name="add_welcome",
             description="test",
             guild=discord.Object(id=self.guild_id) if self.guild_id else None,
@@ -94,6 +114,7 @@ class WelcomeBot(discord.Client):
                 await self.update_best_role(interaction.guild)
             await interaction.response.send_message(f"done", ephemeral=True)
 
+
     async def on_ready(self):
         print(f'Logged on')
         guild = discord.utils.get(self.guilds, id=self.guild_id)
@@ -104,6 +125,9 @@ class WelcomeBot(discord.Client):
             print("Guild not found ")
         print(f'Synced')
 
+    async def on_guild_join(self, guild: discord.Guild):
+        await self.guild_collection.create_guild_document(guild.id)
+        
     async def on_member_join(self, member: discord.Member):
         await self.send_welcome_message(member)
 
@@ -139,7 +163,10 @@ class WelcomeBot(discord.Client):
         return list(set(mentions))
 
     async def update_best_role(self, guild: discord.Guild):
-        role = guild.get_role(self.role)
+        role_id = self.guild_collection.get_top_welcomer_role(guild.id)
+        if not role_id: return
+
+        role = guild.get_role(role_id)
         top_welcomer_id, welcomes = await self.welcome_collection.get_top_welcomer(guild=guild.id)
         if not top_welcomer_id or not role:
             return

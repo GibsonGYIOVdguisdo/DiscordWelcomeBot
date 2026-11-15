@@ -16,16 +16,24 @@ class GuildCollection:
         self.collection = await self.database.create_collection("guilds")
 
     async def create_guild_document(self, guild_id: int):
-        await self.collection.find_one_and_delete({"guild":guild_id})
+        await self.collection.delete_one({"guild":guild_id})
         await self.collection.insert_one(
                     Guild(
-                        guild= guild_id, 
+                        guild=guild_id, 
                         best_welcomer_role=None,
                         welcome_channel=None,
                     )
                 )
 
+    async def get_top_welcomer_role(self, guild_id):
+        guild_document: Guild = await self.collection.find_one({"guild":guild_id})
+        if not guild_document: return None
+        return guild_document.get("top_welcomer_role", None)
 
+    async def set_top_welcomer_role(self, guild_id, role_id):
+        guild_document: Guild = await self.collection.find_one({"guild":guild_id})
+        guild_document["top_welcomer_role"] = role_id
+        await self.collection.update_one({"guild":guild_id}, guild_document)
 
     async def close_client(self):
         await self.client.close()
