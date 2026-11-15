@@ -63,12 +63,22 @@ class WelcomeBot(discord.Client):
 
         @self.tree.command(
             name="set_top_welcomer_role",
-            description="test",
+            description="setup",
             guild=discord.Object(id=self.guild_id) if self.guild_id else None,
         )
         @app_commands.default_permissions(administrator=True)
         async def set_top_welcomer_role(interaction: discord.Interaction, role: discord.Role):
             await self.guild_collection.set_top_welcomer_role(interaction.guild_id, role.id)
+            await interaction.response.send_message(f"done", ephemeral=True)
+
+        @self.tree.command(
+            name="set_welcome_channel",
+            description="setup",
+            guild=discord.Object(id=self.guild_id) if self.guild_id else None,
+        )
+        @app_commands.default_permissions(administrator=True)
+        async def set_top_welcomer_role(interaction: discord.Interaction, channel: discord.TextChannel):
+            await self.guild_collection.set_welcome_channel(interaction.guild_id, channel.id)
             await interaction.response.send_message(f"done", ephemeral=True)
 
         @self.tree.command(
@@ -127,20 +137,29 @@ class WelcomeBot(discord.Client):
 
     async def on_guild_join(self, guild: discord.Guild):
         await self.guild_collection.create_guild_document(guild.id)
-        
+
     async def on_member_join(self, member: discord.Member):
         await self.send_welcome_message(member)
 
     async def on_member_leave(self, member: discord.Member):
-        message: discord.Message = await self.get_channel(self.channel).history().find(lambda m: m.author.id == self.user.id and member in m.mentions)
-        if message:
-            await message.delete()
+        await self.remove_welcome_message(member)
 
     async def send_welcome_message(self, member: discord.Member):
+        welcome_channel = await self.guild_collection.get_welcome_channel(member.guild.id)
+        if not welcome_channel: return
+
         embed = discord.Embed(title=f"Welcome {member.display_name}", description=f"Get some roles in the role channel", color=discord.Color.blue())
         embed.set_image(url=member.display_avatar.url)
-        channel = self.get_channel(self.channel)
+        channel = self.get_channel(welcome_channel)
         await channel.send(f"<@{member.id}>", embed=embed, delete_after=300)
+
+    async def remove_welcome_message(self, member: discord.Member):
+        welcome_channel = await self.guild_collection.get_welcome_channel(member.guild.id)
+        if not welcome_channel: return
+        
+        message: discord.Message = await self.get_channel(welcome_channel).history().find(lambda m: m.author.id == self.user.id and member in m.mentions)
+        if message:
+            await message.delete()
 
     async def on_message(self, message: discord.Message):
         if message.author.id != self.user.id and message.guild:
