@@ -51,7 +51,13 @@ class WelcomeCountTracker:
         if guild is not None:
             match_stage["guild"] = guild
         if weekly:
-            match_stage["date"] = {"$gte": datetime.now(tz=UTC) - timedelta(days=7)}
+            now = datetime.now(tz=UTC)
+            match_stage["date"] = {"$gte": now - timedelta(
+                days=now.weekday(),
+                hours=now.hour,
+                minutes=now.minute,
+                seconds=now.second
+            )}
 
         pipeline = [
             {"$match": match_stage},
@@ -68,7 +74,13 @@ class WelcomeCountTracker:
         if guild is not None:
             match_stage["guild"] = guild
         if weekly:
-            match_stage["date"] = {"$gte": datetime.now(tz=UTC) - timedelta(days=7)}
+            now = datetime.now(tz=UTC)
+            match_stage["date"] = {"$gte": now - timedelta(
+                days=now.weekday(),
+                hours=now.hour,
+                minutes=now.minute,
+                seconds=now.second
+            )}
 
         pipeline = [
             {"$match": match_stage},
