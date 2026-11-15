@@ -78,6 +78,48 @@ class WelcomeBot(discord.Client):
             await interaction.response.send_message(f"done", ephemeral=True)
 
         @self.tree.command(
+            name="customise_role",
+            description="Set the name of your customisable role",
+            guild=discord.Object(id=self.guild_id) if self.guild_id else None,
+        )
+        @app_commands.default_permissions(administrator=True)
+        async def customise_role(interaction: discord.Interaction, new_name: str):
+            customisable_roles = await self.guild_collection.get_customisable_roles(interaction.guild_id)
+
+            old_name = ""
+            for role in interaction.user.roles:
+                if role.id in customisable_roles:
+                    old_name = role.name
+                    await role.edit(name=new_name)
+                    break
+            else:
+                return await interaction.response.send_message(f"You have no custom roles to update", ephemeral=True)
+            
+            await interaction.response.send_message(f"Role {old_name} updated to {new_name}", ephemeral=True)
+
+        @self.tree.command(
+            name="add_customisable_role",
+            description="setup",
+            guild=discord.Object(id=self.guild_id) if self.guild_id else None,
+        )
+        @app_commands.default_permissions(administrator=True)
+        async def set_top_welcomer_role(interaction: discord.Interaction, role: discord.Role, default_name: str = None):
+            await self.guild_collection.add_customisable_role(interaction.guild_id, role.id, default_name)
+            await interaction.response.send_message(f"done", ephemeral=True)
+
+        @self.tree.command(
+            name="remove_customisable_role",
+            description="setup",
+            guild=discord.Object(id=self.guild_id) if self.guild_id else None,
+        )
+        @app_commands.default_permissions(administrator=True)
+        async def set_top_welcomer_role(interaction: discord.Interaction, role: discord.Role):
+            await self.guild_collection.remove_customisable_role(interaction.guild_id, role.id)
+            await interaction.response.send_message(f"done", ephemeral=True)
+
+
+
+        @self.tree.command(
             name="reset_guild_settings",
             description="test",
             guild=discord.Object(id=self.guild_id) if self.guild_id else None,
