@@ -8,9 +8,7 @@ from database.guild_collection import GuildCollection
 class WelcomeBot(discord.Client):
     def __init__(
         self,
-        channel: int = None,
         guild_id: int = None,
-        role: int = None,
         welcome_collection: WelcomeCollection = None,
         guild_collection: GuildCollection = None,
         intents: discord.Intents = None,
@@ -23,9 +21,7 @@ class WelcomeBot(discord.Client):
 
         super().__init__(intents=intents, **kwargs)
 
-        self.channel = channel
         self.guild_id = guild_id
-        self.role = role
 
         self.tree = app_commands.CommandTree(self)
         self.welcome_collection = welcome_collection
@@ -123,7 +119,6 @@ class WelcomeBot(discord.Client):
             if interaction.guild:
                 await self.update_best_role(interaction.guild)
             await interaction.response.send_message(f"done", ephemeral=True)
-
 
     async def on_ready(self):
         print(f'Logged on')
