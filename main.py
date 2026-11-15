@@ -1,7 +1,8 @@
 import os
 import dotenv
 from welcome_bot import WelcomeBot
-from welcome_tracker import WelcomeCountTracker
+from database.welcome_collection import WelcomeCollection
+from database.guild_collection import GuildCollection
 import asyncio
 
 dotenv.load_dotenv()
@@ -13,8 +14,9 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 
 async def main():
-    tracker = WelcomeCountTracker(MONGO_URI)
-    bot_client = WelcomeBot(channel=CHANNEL, guild_id=GUILD_ID, role=ROLE, tracker=tracker)
+    welcome_collection = WelcomeCollection(MONGO_URI)
+    guild_collection = GuildCollection(MONGO_URI)
+    bot_client = WelcomeBot(channel=CHANNEL, guild_id=GUILD_ID, role=ROLE, welcome_collection=welcome_collection)
     await bot_client.start(TOKEN)
 
 

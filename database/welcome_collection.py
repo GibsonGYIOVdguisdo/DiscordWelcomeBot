@@ -1,8 +1,8 @@
 from pymongo import AsyncMongoClient, server_api
-from welcome_model import Welcome
+from models.welcome_model import Welcome
 from datetime import datetime, UTC, timedelta
 
-class WelcomeCountTracker:
+class WelcomeCollection:
     def __init__(self, mongo_uri: str):
         self.client = AsyncMongoClient(
             mongo_uri,
