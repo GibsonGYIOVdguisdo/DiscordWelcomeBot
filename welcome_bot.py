@@ -175,6 +175,17 @@ class WelcomeBot(discord.Client):
     async def on_guild_join(self, guild: discord.Guild):
         await self.guild_collection.create_guild_document(guild.id)
 
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if len(before.roles) < len(after.roles):
+            customisable_roles = await self.guild_collection.get_customisable_roles(after.guild.id)
+            before_roles = set(role.id for role in before.roles)
+            after_roles = set(role.id for role in after.roles)
+            for role_id in after_roles - before_roles:
+                if role_id in customisable_roles:
+                    if customisable_roles[role_id]:
+                        role = after.guild.get_role(role_id)
+                        await role.edit(name=customisable_roles[role_id])
+
     async def on_member_join(self, member: discord.Member):
         await self.send_welcome_message(member)
 
