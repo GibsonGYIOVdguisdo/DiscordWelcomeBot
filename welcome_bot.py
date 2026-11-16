@@ -230,7 +230,7 @@ class WelcomeBot(discord.Client):
         return list(set(mentions))
 
     async def update_best_role(self, guild: discord.Guild):
-        role_id = self.guild_collection.get_top_welcomer_role(guild.id)
+        role_id = await self.guild_collection.get_top_welcomer_role(guild.id)
         if not role_id: return
 
         role = guild.get_role(role_id)
